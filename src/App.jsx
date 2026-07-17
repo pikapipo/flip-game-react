@@ -10,8 +10,6 @@ const images = [
   "/cards/bul.png",
   "/cards/eevee.png",
   "/cards/snorlax.png",
-  "/cards/f4.jpg",
-  "/cards/duck.png",
 ];
 
 function App() {
@@ -19,6 +17,17 @@ function App() {
   const [flippedCards, setFlippedCards] = useState([]);
   const [matchedCards, setMatchedCards] = useState([]);
   const [disabled, setDisabled] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const remainingSeconds = (seconds % 60).toString().padStart(2, "0");
+
+    return `${minutes}:${remainingSeconds}`;
+  };
 
   const shuffleCards = () => {
     const duplicated = [...images, ...images];
@@ -33,11 +42,25 @@ function App() {
     setCards(shuffled);
     setFlippedCards([]);
     setMatchedCards([]);
+    setElapsedTime(0);
+    setTimerRunning(false);
   };
 
   useEffect(() => {
     shuffleCards();
   }, []);
+
+  useEffect(() => {
+    if (!timerRunning) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setElapsedTime((prev) => prev + 1);
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [timerRunning]);
 
   const handleFlip = (card) => {
     if (
@@ -47,6 +70,10 @@ function App() {
       matchedCards.includes(card.image)
     ) {
       return;
+    }
+
+    if (!timerRunning) {
+      setTimerRunning(true);
     }
 
     const updated = [...flippedCards, card.id];
@@ -59,7 +86,15 @@ function App() {
       const secondCard = cards.find((c) => c.id === updated[1]);
 
       if (firstCard.image === secondCard.image) {
-        setMatchedCards((prev) => [...prev, firstCard.image]);
+        setMatchedCards((prev) => {
+          const nextMatchedCards = [...prev, firstCard.image];
+
+          if (nextMatchedCards.length === images.length) {
+            setTimerRunning(false);
+          }
+
+          return nextMatchedCards;
+        });
 
         setTimeout(() => {
           setFlippedCards([]);
@@ -88,7 +123,12 @@ function App() {
         RESTART
       </button>
 
-      {win && <div className="win-text">YOU WIN !</div>}
+      <div className="status-bar">
+        <div className="timer">TIME: {formatTime(elapsedTime)}</div>
+        {win && (
+          <div className="win-text">YOU WIN! {formatTime(elapsedTime)}</div>
+        )}
+      </div>
 
       <div className="grid">
         {cards.map((card) => (
